@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3시간 30분 주기 타이머 (가로 바)</title>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: sans-serif;
+    }
+    /* 타이머 컨테이너 스타일 */
+    #timer-container {
+      width: 300px;
+      height: 100px;
+      position: relative; /* 자식 요소의 absolute 위치 기준 */
+      overflow: hidden; /* 내부 요소가 넘치지 않도록 */
+    }
+    /* 진행률 바 스타일 */
+    #progress-bar {
+      position: absolute;
+      left: 0;
+      /* top, height는 JS에서 동적으로 설정 */
+      width: 100%; /* 초기 너비 (JS에서 줄어듦) */
+      background-color: #0092FF; /* 기본 색상 */
+      border-radius: 3px; /* 컨테이너보다 약간 작게 */
+      /* 부드러운 전환 효과 */
+      transition: width 0.2s linear, background-color 0.3s ease, height 0.3s ease, top 0.3s ease;
+    }
+    /* 텍스트 오버레이 컨테이너 */
+    #text-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1; /* 진행률 바 위에 오도록 */
+      pointer-events: none; /* 텍스트 영역 클릭 방지 */
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    }
+    /* 남은 시간 텍스트 스타일 */
+    #timer-text {
+      font-size: 2.2em; /* 크기 조정 */
+      font-weight: bold;
+      color: #fff; /* 기본 흰색 */
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7); /* 가독성 향상 */
+    }
+    /* 메시지 텍스트 스타일 */
+    #message-text {
+      font-size: 1.1em;
+      font-weight: bold;
+      color: #fff; /* 기본 흰색 */
+      text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+      height: 1.5em;
+      line-height: 1.5em;
+      margin-top: 2px; /* 시간과의 간격 */
+    }
+
+    /* 오디오 재생 실패 시 사용자 안내 메시지 스타일 */
+    #audio-prompt {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(255, 255, 0, 0.8);
+      padding: 10px;
+      border: 1px solid black;
+      border-radius: 5px;
+      z-index: 1000;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+
+<div id="timer-container">
+  <div id="progress-bar"></div>
+  <div id="text-overlay">
+    <div id="timer-text">--:--:--</div>
+    <div id="message-text"></div>
+  </div>
+</div>
+
+<audio id="alert-sound" src="impact.mp3" preload="auto"></audio>
+
+<div id="audio-prompt" style="display: none;">알림 소리를 재생하려면 여기를 클릭하세요.</div>
+
+<script>
+  // --- DOM 요소 가져오기 ---
+  const progressBarElement = document.getElementById('progress-bar');
+  const timerTextElement = document.getElementById('timer-text');
+  const messageTextElement = document.getElementById('message-text');
+  const alertSound = document.getElementById('alert-sound');
+  const audioPromptElement = document.getElementById('audio-prompt');
+
+  // --- 상수 설정 ---
+  const TOTAL_CYCLE_MINUTES = 3 * 60 + 30; // 3시간 30분
+  const TOTAL_CYCLE_MS = TOTAL_CYCLE_MINUTES * 60 * 1000;
+
+  const COLOR_DEFAULT = '#0092FF';
+  const COLOR_WARN = 'orange';
+  const COLOR_ALERT = 'red';
+
+  // --- 상태 변수 ---
+  let soundPlayedInThisCycle = false; // 현재 주기에서 알림음 재생 여부
+
+  // --- 함수 정의 ---
+  function getMostRecentMondayMidnight() {
+    // ... (이전과 동일) ...
+    const now = new Date();
+    const currentDay = now.getDay();
+    const daysSinceMonday = (currentDay === 0) ? 6 : currentDay - 1;
+    const mondayMidnight = new Date(now);
+    mondayMidnight.setDate(now.getDate() - daysSinceMonday);
+    mondayMidnight.setHours(0, 0, 0, 0);
+    return mondayMidnight;
+  }
+
+  function formatTime(ms) {
+    // ... (이전과 동일) ...
+    if (ms < 0) ms = 0;
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function playAlertSound() {
+    // ... (이전과 동일, 오디오 재생 및 자동재생 실패 처리) ...
+    alertSound.currentTime = 0;
+    const playPromise = alertSound.play();
+    if (playPromise !== undefined) {
+      playPromise.then(_ => {
+        audioPromptElement.style.display = 'none';
+        console.log("알림음 자동 재생 성공");
+      }).catch(error => {
+        console.error("알림음 자동 재생 실패:", error);
+        if (audioPromptElement.style.display === 'none') {
+          audioPromptElement.style.display = 'block';
+          audioPromptElement.onclick = () => {
+            alertSound.play();
+            audioPromptElement.style.display = 'none';
+            audioPromptElement.onclick = null;
+          };
+        }
+      });
+    }
+  }
+
+  // --- 디스플레이 업데이트 함수 (스타일 변경) ---
+  function updateDisplay(remainingMs) {
+    const progress = Math.max(0, Math.min(1, remainingMs / TOTAL_CYCLE_MS));
+    const remainingMinutes = remainingMs / (60 * 1000);
+
+    let color = COLOR_DEFAULT;
+    let heightFactor = 0.8; // 기본 높이 비율 (두께 1x)
+    let message = "디아블로4 월드 보스 알림이";
+    let textColor = "#fff"; // 기본 텍스트 색상
+
+    if (remainingMinutes < 5) {
+      color = COLOR_ALERT; // 빨강
+      heightFactor = 1.0; // 최대 높이 비율 (두께 2x 시뮬레이션)
+      message = "빨리 뛰어 월드 보스 잡아야 해";
+      textColor = "#fff"; // 빨간 배경 위 흰색 텍스트
+    } else if (remainingMinutes < 10) {
+      color = COLOR_WARN; // 주황
+      heightFactor = 0.8; // 중간 높이 비율 (두께 1.5x 시뮬레이션)
+      message = "월드 보스가 곧 등장합니다";
+      textColor = "#fff"; // 주황 배경 위 검은색 텍스트 (가독성)
+    } else if (remainingMinutes > 10) {
+      color = COLOR_DEFAULT;
+      heightFactor = 0.8;
+      message = "디아블로4 월드 보스 알림이";
+      textColor = "#fff";
+    }
+
+    // 진행률 바 스타일 업데이트
+    progressBarElement.style.width = `${progress * 100}%`;
+    progressBarElement.style.backgroundColor = color;
+    // 높이와 세로 위치 조정으로 두께 변경 효과
+    progressBarElement.style.height = `${heightFactor * 100}%`;
+    progressBarElement.style.top = `${(1 - heightFactor) / 2 * 100}%`;
+
+    // 텍스트 업데이트
+    timerTextElement.textContent = formatTime(remainingMs);
+    messageTextElement.textContent = message;
+    messageTextElement.style.visibility = message ? 'visible' : 'hidden';
+
+    // 텍스트 색상 조정 (배경색에 따라 가독성 높이기)
+    timerTextElement.style.color = textColor;
+    messageTextElement.style.color = textColor; // 메시지도 동일하게 적용
+  }
+
+
+  // --- 메인 업데이트 루프 ---
+  function update() {
+    const now = new Date();
+    const mondayMidnight = getMostRecentMondayMidnight();
+    const elapsedMsSinceMonday = now.getTime() - mondayMidnight.getTime();
+
+    if (elapsedMsSinceMonday < 0) {
+      updateDisplay(TOTAL_CYCLE_MS); // 전체 시간으로 디스플레이 업데이트
+      soundPlayedInThisCycle = false;
+      requestAnimationFrame(update);
+      return;
+    }
+
+    const msIntoCurrentCycle = elapsedMsSinceMonday % TOTAL_CYCLE_MS;
+    const remainingMs = TOTAL_CYCLE_MS - msIntoCurrentCycle;
+    const remainingMinutes = remainingMs / (60 * 1000); // 분 계산은 여기서 한 번만
+
+    // 알림음 재생 로직
+    if (remainingMinutes < 5) {
+      if (!soundPlayedInThisCycle) {
+        playAlertSound();
+        soundPlayedInThisCycle = true;
+      }
+    } else {
+      soundPlayedInThisCycle = false; // 5분 이상이면 플래그 리셋
+    }
+
+    // 디스플레이 업데이트 함수 호출
+    updateDisplay(remainingMs);
+
+    // 다음 프레임 요청
+    requestAnimationFrame(update);
+  }
+
+  // 초기 타이머 실행
+  update();
+
+</script>
+
+</body>
+</html>
