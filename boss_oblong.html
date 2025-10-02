@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="kr">
 <head>
   <title>디아블로4 보스 & 군단 타이머</title>
   <meta charset="UTF-8">
@@ -11,27 +11,14 @@
           align-items: center;
           min-height: 100vh;
           font-family: sans-serif;
-          gap: 20px;
-          padding: 20px;
       }
 
       /* 타이머 컨테이너 공통 스타일 */
       .timer-container {
           width: 350px;
-          height: 100px;
+          height: 85px;
           position: relative;
           overflow: hidden;
-          border: 2px solid #333;
-          border-radius: 8px;
-      }
-
-      /* 제목 스타일 */
-      .timer-title {
-          text-align: center;
-          font-size: 1.2em;
-          font-weight: bold;
-          margin-bottom: 5px;
-          color: #333;
       }
 
       /* 진행률 바 공통 스타일 */
@@ -143,9 +130,10 @@
   const BOSS_CYCLE_MINUTES = 3 * 60 + 30;
   const BOSS_CYCLE_MS = BOSS_CYCLE_MINUTES * 60 * 1000;
 
-  // 군단 이벤트: 25분
+  // 군단 이벤트: 25분 (15분 오프셋)
   const LEGION_CYCLE_MINUTES = 25;
   const LEGION_CYCLE_MS = LEGION_CYCLE_MINUTES * 60 * 1000;
+  const LEGION_OFFSET_MS = 15 * 60 * 1000;
 
   const COLOR_DEFAULT = '#0092FF';
   const COLOR_WARN = 'orange';
@@ -208,7 +196,7 @@
     const remainingMinutes = remainingMs / (60 * 1000);
 
     let color = COLOR_DEFAULT;
-    let heightFactor = 0.8;
+    let heightFactor = 0.9;
     let message = "디아블로4 월드 보스 알림이";
     let textColor = "#fff";
 
@@ -219,12 +207,12 @@
       textColor = "#fff";
     } else if (remainingMinutes < 10) {
       color = COLOR_WARN;
-      heightFactor = 0.8;
+      heightFactor = 0.9;
       message = "월드 보스가 곧 등장합니다";
       textColor = "#fff";
     } else if (remainingMinutes > 10) {
       color = COLOR_DEFAULT;
-      heightFactor = 0.8;
+      heightFactor = 0.9;
       message = "디아블로4 월드 보스 알림이";
       textColor = "#fff";
     }
@@ -248,7 +236,7 @@
     const remainingMinutes = remainingMs / (60 * 1000);
 
     let color = COLOR_LEGION;
-    let heightFactor = 0.8;
+    let heightFactor = 0.9;
     let message = "군단 이벤트 대기 중";
     let textColor = "#fff";
 
@@ -296,8 +284,9 @@
     const bossRemaining = BOSS_CYCLE_MS - (elapsedMsSinceMonday % BOSS_CYCLE_MS);
     const bossRemainingMinutes = bossRemaining / (60 * 1000);
 
-    // 군단 이벤트 타이머 계산
-    const legionRemaining = LEGION_CYCLE_MS - (elapsedMsSinceMonday % LEGION_CYCLE_MS);
+    // 군단 이벤트 타이머 계산 (10분 오프셋 적용)
+    const legionElapsed = (elapsedMsSinceMonday + LEGION_OFFSET_MS) % LEGION_CYCLE_MS;
+    const legionRemaining = LEGION_CYCLE_MS - legionElapsed;
     const legionRemainingMinutes = legionRemaining / (60 * 1000);
 
     // 월드 보스 알림음 재생 로직

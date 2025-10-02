@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="kr">
 <head>
   <title>디아블로4 보스 & 군단 타이머</title>
   <meta charset="UTF-8">
@@ -11,29 +11,13 @@
           min-height: 100vh;
           background-color: #f0f0f0;
           font-family: sans-serif;
-          gap: 40px;
-          flex-wrap: wrap;
           padding: 20px;
-      }
-
-      .timer-wrapper {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-      }
-
-      .timer-title {
-          font-size: 1.3em;
-          font-weight: bold;
-          margin-bottom: 10px;
-          text-align: center;
-          color: #333;
       }
 
       .timer-container {
           position: relative;
-          width: 300px;
-          height: 300px;
+          width: 400px;
+          height: 400px;
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -47,97 +31,146 @@
           left: 0;
       }
 
-      .timer-text {
+      .timer-text-container {
           position: relative;
-          z-index: 1;
-          font-size: 2.2em;
+          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          align-items: center;
+          height: 100%;
+          width: 100%;
+          pointer-events: none;
+      }
+
+      .boss-text-section {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin-top: 60px;
+      }
+
+      .legion-text-section {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin-bottom: 60px;
+      }
+
+      .timer-text {
+          font-size: 2.0em;
           font-weight: bold;
-          color: #d0d0d0;
-          margin-bottom: 10px;
-          text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+          text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+          margin-bottom: 5px;
+      }
+
+      .boss-timer-text {
+          color: #0092FF;
+      }
+
+      .legion-timer-text {
+          color: #9d4edd;
       }
 
       .message-text {
-          position: relative;
-          z-index: 1;
-          font-size: 1.1em;
+          font-size: 0.9em;
           font-weight: bold;
-          color: red;
+          text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
           text-align: center;
-          height: 2em;
+          max-width: 200px;
           line-height: 1.2em;
-          max-width: 250px;
+      }
+
+      .boss-message-text {
+          color: #0092FF;
+      }
+
+      .legion-message-text {
+          color: #9d4edd;
       }
 
       /* 반응형 디자인 */
-      @media (max-width: 700px) {
-          body {
-              flex-direction: column;
-              gap: 30px;
-          }
-
+      @media (max-width: 500px) {
           .timer-container {
-              width: 250px;
-              height: 250px;
+              width: 300px;
+              height: 300px;
           }
 
           .timer-text {
-              font-size: 1.8em;
+              font-size: 1.6em;
+          }
+
+          .message-text {
+              font-size: 0.8em;
+          }
+
+          .boss-text-section {
+              margin-top: 40px;
+          }
+
+          .legion-text-section {
+              margin-bottom: 40px;
           }
       }
   </style>
 </head>
 <body>
 
-<!-- 월드 보스 타이머 -->
-<div class="timer-wrapper">
-  <div class="timer-container">
-    <canvas class="timer-canvas" id="boss-canvas" width="300" height="300"></canvas>
-    <div class="timer-text" id="boss-timer-text">--:--:--</div>
-    <div class="message-text" id="boss-message-text"></div>
-  </div>
-</div>
+<div class="timer-container">
+  <!-- 두 캔버스를 겹쳐서 배치 -->
+  <canvas class="timer-canvas" id="boss-canvas" width="400" height="400"></canvas>
+  <canvas class="timer-canvas" id="legion-canvas" width="400" height="400"></canvas>
 
-<!-- 군단 이벤트 타이머 -->
-<div class="timer-wrapper">
-  <div class="timer-container">
-    <canvas class="timer-canvas" id="legion-canvas" width="300" height="300"></canvas>
-    <div class="timer-text" id="legion-timer-text">--:--</div>
-    <div class="message-text" id="legion-message-text"></div>
+  <!-- 텍스트를 상하로 분리 -->
+  <div class="timer-text-container">
+    <!-- 월드 보스 텍스트 (위쪽) -->
+    <div class="boss-text-section">
+      <div class="timer-text boss-timer-text" id="boss-timer-text">--:--:--</div>
+      <div class="message-text boss-message-text" id="boss-message-text"></div>
+    </div>
+
+    <!-- 군단 이벤트 텍스트 (아래쪽) -->
+    <div class="legion-text-section">
+      <div class="timer-text legion-timer-text" id="legion-timer-text">--:--</div>
+      <div class="message-text legion-message-text" id="legion-message-text"></div>
+    </div>
   </div>
 </div>
 
 <script>
   // --- DOM 요소 가져오기 ---
-  // 월드 보스 타이머 요소들
   const bossCanvas = document.getElementById('boss-canvas');
   const bossCtx = bossCanvas.getContext('2d');
   const bossTimerTextElement = document.getElementById('boss-timer-text');
   const bossMessageTextElement = document.getElementById('boss-message-text');
 
-  // 군단 이벤트 타이머 요소들
   const legionCanvas = document.getElementById('legion-canvas');
   const legionCtx = legionCanvas.getContext('2d');
   const legionTimerTextElement = document.getElementById('legion-timer-text');
   const legionMessageTextElement = document.getElementById('legion-message-text');
 
   // --- 상수 설정 ---
-  const DEFAULT_LINE_WIDTH = 10;
-  const bossRadius = bossCanvas.width / 2 - (DEFAULT_LINE_WIDTH * 2 / 2) - 5;
-  const legionRadius = legionCanvas.width / 2 - (DEFAULT_LINE_WIDTH * 2 / 2) - 5;
+  const DEFAULT_LINE_WIDTH = 12;
+  const centerX = bossCanvas.width / 2;
+  const centerY = bossCanvas.height / 2;
+
+  // 두 원을 다른 반지름으로 설정 (바깥쪽: 월드보스, 안쪽: 군단)
+  const bossRadius = 160;   // 바깥쪽 원 (월드보스)
+  const legionRadius = 120; // 안쪽 원 (군단)
 
   // 월드 보스: 3시간 30분
   const BOSS_CYCLE_MINUTES = 3 * 60 + 30;
   const BOSS_CYCLE_MS = BOSS_CYCLE_MINUTES * 60 * 1000;
 
-  // 군단 이벤트: 25분
+  // 군단 이벤트: 25분 (15분 오프셋)
   const LEGION_CYCLE_MINUTES = 25;
   const LEGION_CYCLE_MS = LEGION_CYCLE_MINUTES * 60 * 1000;
+  const LEGION_OFFSET_MS = 15 * 60 * 1000; // 15분 오프셋
 
   const COLOR_DEFAULT = '#0092FF';
   const COLOR_WARN = 'orange';
   const COLOR_ALERT = 'red';
-  const COLOR_LEGION = '#9d4edd'; // 군단 이벤트 기본 색상
+  const COLOR_LEGION = '#9d4edd';
   const COLOR_BACKGROUND = '#e0e0e0';
 
   // --- 상태 변수 ---
@@ -181,10 +214,7 @@
 
   // --- 월드 보스 타이머 그리기 함수 ---
   function drawBossTimer(remainingMs) {
-    const centerX = bossCanvas.width / 2;
-    const centerY = bossCanvas.height / 2;
     const startAngle = -0.5 * Math.PI;
-
     const progress = Math.max(0, Math.min(1, remainingMs / BOSS_CYCLE_MS));
     const endAngle = startAngle + progress * 2 * Math.PI;
 
@@ -195,7 +225,7 @@
 
     if (remainingMinutes < 5) {
       color = COLOR_ALERT;
-      currentLineWidth = DEFAULT_LINE_WIDTH * 2;
+      currentLineWidth = DEFAULT_LINE_WIDTH * 1.5;
       message = "빨리 뛰어 월드 보스 잡아야 해";
       if (bossCanPlaySound) {
         playImpactSound();
@@ -203,27 +233,27 @@
       }
     } else if (remainingMinutes < 10) {
       color = COLOR_WARN;
-      currentLineWidth = DEFAULT_LINE_WIDTH * 1.5;
+      currentLineWidth = DEFAULT_LINE_WIDTH * 1.2;
       message = "월드 보스 준비!";
       bossCanPlaySound = true;
-    } else if (remainingMinutes > 10) {
+    } else {
       color = COLOR_DEFAULT;
       currentLineWidth = DEFAULT_LINE_WIDTH;
       message = "디아블로4 월드 보스 알림이";
       bossCanPlaySound = true;
     }
 
-    // 캔버스 지우기
+    // 월드보스 캔버스 지우기
     bossCtx.clearRect(0, 0, bossCanvas.width, bossCanvas.height);
 
-    // 배경 원 그리기
+    // 배경 원 그리기 (월드보스 - 바깥쪽)
     bossCtx.beginPath();
     bossCtx.arc(centerX, centerY, bossRadius, 0, 2 * Math.PI);
     bossCtx.strokeStyle = COLOR_BACKGROUND;
-    bossCtx.lineWidth = DEFAULT_LINE_WIDTH / 2;
+    bossCtx.lineWidth = DEFAULT_LINE_WIDTH * 0.3;
     bossCtx.stroke();
 
-    // 진행률 호 그리기
+    // 진행률 호 그리기 (월드보스)
     if (progress > 0) {
       bossCtx.beginPath();
       bossCtx.arc(centerX, centerY, bossRadius, startAngle, endAngle);
@@ -237,15 +267,11 @@
     bossTimerTextElement.textContent = formatTime(remainingMs, true);
     bossMessageTextElement.textContent = message;
     bossMessageTextElement.style.visibility = message ? 'visible' : 'hidden';
-    bossMessageTextElement.style.color = COLOR_ALERT;
   }
 
   // --- 군단 이벤트 타이머 그리기 함수 ---
   function drawLegionTimer(remainingMs) {
-    const centerX = legionCanvas.width / 2;
-    const centerY = legionCanvas.height / 2;
     const startAngle = -0.5 * Math.PI;
-
     const progress = Math.max(0, Math.min(1, remainingMs / LEGION_CYCLE_MS));
     const endAngle = startAngle + progress * 2 * Math.PI;
 
@@ -256,7 +282,7 @@
 
     if (remainingMinutes < 2) {
       color = COLOR_ALERT;
-      currentLineWidth = DEFAULT_LINE_WIDTH * 2;
+      currentLineWidth = DEFAULT_LINE_WIDTH * 1.5;
       message = "군단 이벤트 곧 시작!";
       if (legionCanPlaySound) {
         playImpactSound();
@@ -264,7 +290,7 @@
       }
     } else if (remainingMinutes < 5) {
       color = COLOR_WARN;
-      currentLineWidth = DEFAULT_LINE_WIDTH * 1.5;
+      currentLineWidth = DEFAULT_LINE_WIDTH * 1.2;
       message = "군단 이벤트 준비하세요";
       legionCanPlaySound = true;
     } else {
@@ -274,17 +300,17 @@
       legionCanPlaySound = true;
     }
 
-    // 캔버스 지우기
+    // 군단 캔버스 지우기
     legionCtx.clearRect(0, 0, legionCanvas.width, legionCanvas.height);
 
-    // 배경 원 그리기
+    // 배경 원 그리기 (군단 - 안쪽)
     legionCtx.beginPath();
     legionCtx.arc(centerX, centerY, legionRadius, 0, 2 * Math.PI);
     legionCtx.strokeStyle = COLOR_BACKGROUND;
-    legionCtx.lineWidth = DEFAULT_LINE_WIDTH / 2;
+    legionCtx.lineWidth = DEFAULT_LINE_WIDTH * 0.3;
     legionCtx.stroke();
 
-    // 진행률 호 그리기
+    // 진행률 호 그리기 (군단)
     if (progress > 0) {
       legionCtx.beginPath();
       legionCtx.arc(centerX, centerY, legionRadius, startAngle, endAngle);
@@ -298,7 +324,6 @@
     legionTimerTextElement.textContent = formatTime(remainingMs, false);
     legionMessageTextElement.textContent = message;
     legionMessageTextElement.style.visibility = message ? 'visible' : 'hidden';
-    legionMessageTextElement.style.color = color === COLOR_ALERT ? COLOR_ALERT : COLOR_LEGION;
   }
 
   // --- 메인 업데이트 루프 ---
@@ -317,8 +342,9 @@
     // 월드 보스 타이머 계산
     const bossRemaining = BOSS_CYCLE_MS - (elapsedMsSinceMonday % BOSS_CYCLE_MS);
 
-    // 군단 이벤트 타이머 계산
-    const legionRemaining = LEGION_CYCLE_MS - (elapsedMsSinceMonday % LEGION_CYCLE_MS);
+    // 군단 이벤트 타이머 계산 (15분 오프셋 적용)
+    const legionElapsed = (elapsedMsSinceMonday + LEGION_OFFSET_MS) % LEGION_CYCLE_MS;
+    const legionRemaining = LEGION_CYCLE_MS - legionElapsed;
 
     // 타이머 그리기
     drawBossTimer(bossRemaining);
