@@ -126,15 +126,17 @@
   const audioPromptElement = document.getElementById('audio-prompt');
 
   // --- 상수 설정 ---
+  const BASE_DATE = new Date('2023-06-06T00:00:00+09:00'); // 디아블로 4 출시일 (기준점)
+
   // 월드 보스: 3시간 30분
   const BOSS_CYCLE_MINUTES = 3 * 60 + 30;
   const BOSS_CYCLE_MS = BOSS_CYCLE_MINUTES * 60 * 1000;
   const BOSS_OFFSET_MS = 0; // 보스 시간 오프셋 (밀리초 단위)
 
-  // 군단 이벤트: 25분 (15분 오프셋)
+  // 군단 이벤트: 25분 (오프셋 0)
   const LEGION_CYCLE_MINUTES = 25;
   const LEGION_CYCLE_MS = LEGION_CYCLE_MINUTES * 60 * 1000;
-  const LEGION_OFFSET_MS = 20 * 60 * 1000;
+  const LEGION_OFFSET_MS = 0;
 
   const COLOR_DEFAULT = '#0092FF';
   const COLOR_WARN = 'orange';
@@ -269,26 +271,20 @@
   // --- 메인 업데이트 루프 ---
   function update() {
     const now = new Date();
-    const mondayMidnight = getMostRecentMondayMidnight();
-    const elapsedMsSinceMonday = now.getTime() - mondayMidnight.getTime();
-
-    if (elapsedMsSinceMonday < 0) {
-      updateBossDisplay(BOSS_CYCLE_MS);
-      updateLegionDisplay(LEGION_CYCLE_MS);
-      bossSoundPlayedInThisCycle = false;
-      legionSoundPlayedInThisCycle = false;
-      requestAnimationFrame(update);
-      return;
-    }
+    const elapsedMsSinceBase = now.getTime() - BASE_DATE.getTime();
 
     // 월드 보스 타이머 계산
+    // 월드 보스는 기준일이 달라질 경우 오프셋 조정이 필요할 수 있으나,
+    // 현재는 군단 타이머 기준 변경이 주 목적이므로 기존 로직 유지(월요일 자정 기준 모방)
+    const mondayMidnight = getMostRecentMondayMidnight();
+    const elapsedMsSinceMonday = now.getTime() - mondayMidnight.getTime();
     const bossElapsed = (elapsedMsSinceMonday + BOSS_OFFSET_MS) % BOSS_CYCLE_MS;
     const bossRemaining = BOSS_CYCLE_MS - bossElapsed;
     const bossRemainingMinutes = bossRemaining / (60 * 1000);
 
-    // 군단 이벤트 타이머 계산 (10분 오프셋 적용)
-    const legionElapsed = (elapsedMsSinceMonday + LEGION_OFFSET_MS) % LEGION_CYCLE_MS;
-    const legionRemaining = LEGION_CYCLE_MS - legionElapsed;
+    // 군단 이벤트 타이머 계산 (출시일 기준, 25분 주기)
+    const legionElapsed = (elapsedMsSinceBase + LEGION_OFFSET_MS) % LEGION_CYCLE_MS;
+    const legionRemaining = LEGION_CYCLE_MS - (legionElapsed < 0 ? legionElapsed + LEGION_CYCLE_MS : legionElapsed);
     const legionRemainingMinutes = legionRemaining / (60 * 1000);
 
     // 월드 보스 알림음 재생 로직
